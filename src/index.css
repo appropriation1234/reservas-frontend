@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body { 
+    font-family: 'Poppins', sans-serif; 
+}
+
+@keyframes fadeIn { 
+    from { opacity: 0; transform: translateY(10px); } 
+    to { opacity: 1; transform: translateY(0); } 
+}
+
+.fade-in { 
+    animation: fadeIn 0.5s ease-out; 
+}
+
+::-webkit-scrollbar { 
+    width: 8px; 
+}
+
+::-webkit-scrollbar-track { 
+    background: #f1f5f9; 
+    border-radius: 10px; 
+}
+
+::-webkit-scrollbar-thumb { 
+    background: #94a3b8; 
+    border-radius: 10px; 
+}
+
+::-webkit-scrollbar-thumb:hover { 
+    background: #64748b; 
+}
+
+.login-bg {
+  background-image: linear-gradient(to top, #DC2626 0px, #DC2626 100px, #1E3A8A 100px, #0F172A 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 1000px #e2e8f0 inset !important;
+    -webkit-text-fill-color: #0f172a !important;
+    transition: background-color 5000s ease-in-out 0s;
+}
