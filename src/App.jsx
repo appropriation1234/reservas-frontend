@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useMsal, useIsAuthenticated } from "@azure/msal-react";
+import { InteractionStatus } from "@azure/msal-browser";
 
-//componentes de página
 import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
 import AdminPage from './pages/AdminPage';
@@ -13,16 +14,17 @@ import ConfirmationPage from './pages/ConfirmationPage';
 import HelpModal from './pages/HelpModal';
 
 const App = () => {
-    // estados
-    const [page, setPage] = useState('login');
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [showHelp, setShowHelp] = useState(false);
+    const { instance, inProgress, accounts } = useMsal();
+    const isAuthenticated = useIsAuthenticated();
+
     const [resources, setResources] = useState([]);
     const [reservations, setReservations] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [user, setUser] = useState(null);
+    const [user, setUser] = useState(null); // Nosso utilizador interno
+    const [loginError, setLoginError] = useState(null); // Novo estado para gerir erros de login
+    const [page, setPage] = useState('home');
+    const [showHelp, setShowHelp] = useState(false);
     const [reservationFlow, setReservationFlow] = useState({});
-
 
     const fetchData = useCallback(async () => {
         try {
@@ -34,35 +36,56 @@ const App = () => {
             setReservations(resReservations);
         } catch (error) {
             console.error("Erro ao carregar dados da API:", error);
-        } finally {
-            setIsLoading(false);
         }
     }, []);
-
+    
     useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+        const checkUser = async () => {
+            if (isAuthenticated && accounts.length > 0 && !user) { // Adicionado '!user' para evitar re-execuções desnecessárias
+                const currentUserAccount = accounts[0];
+                const userEmail = currentUserAccount.username;
 
-    // funções de manipulação de estado 
-    const handleLogin = async (e) => {
-        e.preventDefault();
-        const email = e.target.email.value;
-        try {
-            const response = await fetch('http://localhost:3001/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email })
-            });
-            if (!response.ok) { throw new Error('Usuário não encontrado.'); }
-            const userData = await response.json();
-            setUser(userData);
-            setIsLoggedIn(true);
-            setPage('home');
-        } catch (err) { alert(err.message); }
+                try {
+                    const response = await fetch('http://localhost:3001/api/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: userEmail })
+                    });
+
+                    if (!response.ok) {
+                        setLoginError(`O seu email (${userEmail}) foi autenticado pela Microsoft, mas não foi encontrado no sistema de reservas. Por favor, contacte o suporte de TI.`);
+                        // Reativa o logout para limpar a sessão inválida
+                        instance.logoutRedirect(); 
+                        return;
+                    }
+                    
+                    const userData = await response.json();
+                    setUser(userData);
+                    
+                    await fetchData();
+
+                } catch (error) {
+                    console.error("Erro de rede ou crítico ao comunicar com a API interna:", error);
+                    setLoginError("Não foi possível conectar ao servidor de reservas. Tente novamente mais tarde.");
+                } finally {
+                    setIsLoading(false);
+                }
+
+            } else if (inProgress === InteractionStatus.None && !isAuthenticated) {
+                setIsLoading(false);
+            }
+        };
+
+        checkUser();
+
+    }, [isAuthenticated, inProgress, accounts, instance, fetchData, user]);
+
+    const handleLogout = () => {
+        instance.logoutRedirect({ postLogoutRedirectUri: "/" });
+        setUser(null); // Limpa o nosso estado de utilizador interno
     };
-      
+    
     const handleLogoClick = () => setPage('home');
-    const handleLogout = () => { setIsLoggedIn(false); setReservationFlow({}); setUser(null); setPage('login'); };
     const handleResourceClick = (resource) => { setReservationFlow({ resource }); setPage(resource.subRecursos?.length > 0 ? 'sub_resource' : 'date_time'); };
     const handleSubResourceSelect = (subResource) => { setReservationFlow(prev => ({ ...prev, subResource })); setPage('date_time'); };
     const handleDateTimeSubmit = (details) => { setReservationFlow(prev => ({ ...prev, timeDetails: details })); setPage('observations'); };
@@ -95,12 +118,18 @@ const App = () => {
 
     const handleNewReservation = () => { setReservationFlow({}); setPage('home'); };
 
-    const renderPage = () => {
-        if (isLoading) return <div className="flex items-center justify-center min-h-screen text-lg font-semibold">A carregar...</div>;
-        if (!isLoggedIn) return <LoginPage onLogin={handleLogin} />;
-        
-        const finalResource = reservationFlow.subResource || reservationFlow.resource;
+    if (isLoading) {
+        return <div className="flex items-center justify-center min-h-screen text-lg font-semibold">A verificar autenticação...</div>;
+    }
 
+    // Se não estiver autenticado ou se não tiver um utilizador válido no nosso sistema, mostra a página de login.
+    // Passamos o erro para a LoginPage para que ela o possa exibir.
+    if (!isAuthenticated || !user) {
+        return <LoginPage loginError={loginError} />;
+    }
+    
+    const renderPage = () => {
+        const finalResource = reservationFlow.subResource || reservationFlow.resource;
         switch(page) {
             case 'home': return <HomePage resources={resources} onResourceClick={handleResourceClick} onLogout={handleLogout} onAdminClick={() => setPage('admin')} onMyReservationsClick={() => setPage('my_reservations')} userProfile={user.profile} onLogoClick={handleLogoClick} onReportClick={() => setPage('report')} onShowHelp={() => setShowHelp(true)} />;
             case 'admin': return <AdminPage onBack={handleBack} onLogout={handleLogout} resources={resources} onLogoClick={handleLogoClick} />;
@@ -110,7 +139,7 @@ const App = () => {
             case 'observations': return <ObservationsPage finalResource={finalResource} reservationDetails={reservationFlow.timeDetails} onBack={handleBack} onLogout={handleLogout} onConfirm={handleConfirm} onLogoClick={handleLogoClick} />;
             case 'confirmation': return <ConfirmationPage details={{...reservationFlow, finalResource}} onNewReservation={handleNewReservation} onMyReservationsClick={() => setPage('my_reservations')} />;
             case 'report': return <ReportPage onBack={handleBack} onLogout={handleLogout} onLogoClick={handleLogoClick} resources={resources} />;
-            default: return <LoginPage onLogin={handleLogin} />;
+            default: return <div>Página não encontrada</div>;
         }
     };
 

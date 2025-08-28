@@ -3,15 +3,17 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-"scripts": {
-  "dev": "vite",
-  "build": "vite build",
-  "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
-  "preview": "vite preview",
-  "tailwind:init": "npx tailwindcss init -p",
-  "tailwind:build": "npx tailwindcss -i ./src/index.css -o ./src/tailwind-output.css --watch"
-},
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview",
+    "tailwind:init": "npx tailwindcss init -p",
+    "tailwind:build": "npx tailwindcss -i ./src/index.css -o ./src/tailwind-output.css --watch"
+  },
   "dependencies": {
+    "@azure/msal-browser": "^4.21.1",
+    "@azure/msal-react": "^3.0.19",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },
