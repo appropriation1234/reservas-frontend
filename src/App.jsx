@@ -135,7 +135,7 @@ const App = () => {
             case 'admin': return <AdminPage onBack={handleBack} onLogout={handleLogout} resources={resources} onLogoClick={handleLogoClick} />;
             case 'my_reservations': return <MyReservationsPage onBack={handleBack} onLogout={handleLogout} userId={user.id} onLogoClick={handleLogoClick} />;
             case 'sub_resource': return <SubResourcePage resource={reservationFlow.resource} onSelect={handleSubResourceSelect} onBack={handleBack} onLogout={handleLogout} onLogoClick={handleLogoClick} />;
-            case 'date_time': return <DateTimePage finalResource={finalResource} reservations={reservations} onBack={handleBack} onLogout={handleLogout} onDateTimeSubmit={handleDateTimeSubmit} onLogoClick={handleLogoClick} />;
+            case 'date_time': return <DateTimePage finalResource={finalResource} reservations={reservations} onBack={handleBack} onLogout={handleLogout} onDateTimeSubmit={handleDateTimeSubmit} onLogoClick={handleLogoClick} userId={user.id} />;
             case 'observations': return <ObservationsPage finalResource={finalResource} reservationDetails={reservationFlow.timeDetails} onBack={handleBack} onLogout={handleLogout} onConfirm={handleConfirm} onLogoClick={handleLogoClick} />;
             case 'confirmation': return <ConfirmationPage details={{...reservationFlow, finalResource}} onNewReservation={handleNewReservation} onMyReservationsClick={() => setPage('my_reservations')} />;
             case 'report': return <ReportPage onBack={handleBack} onLogout={handleLogout} onLogoClick={handleLogoClick} resources={resources} />;
