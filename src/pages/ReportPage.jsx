@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import Header from '../components/Header';
 import icons from '../components/Icons';
 
@@ -9,11 +9,16 @@ const ReportPage = ({ onBack, onLogout, onLogoClick, resources }) => {
     const [filters, setFilters] = useState({ departamento: '', sublocal: '', dataInicio: '', dataFim: '', recurso: '' });
     const [modalDetails, setModalDetails] = useState({ isOpen: false, title: '', data: [] });
     const [isModalLoading, setIsModalLoading] = useState(false);
+    const [activeTab, setActiveTab] = useState('uso');
+    
+    const [intentionData, setIntentionData] = useState([]);
+    const [isLoadingIntentions, setIsLoadingIntentions] = useState(false);
+    const [errorIntentions, setErrorIntentions] = useState('');
 
     const finalBookableResources = useMemo(() => {
         const allResources = [];
         resources.forEach(res => {
-            if (res.subRecursos && res.subRecursos.length > 0) { allResources.push(...res.subRecursos); }
+            if (res.subRecursos && res.subRecursos.length > 0) { allResources.push(...res.subRecursos); } 
             else { allResources.push({ id: res.id, nome: res.nome }); }
         });
         return allResources;
@@ -52,6 +57,27 @@ const ReportPage = ({ onBack, onLogout, onLogoClick, resources }) => {
             setError(err.message); setReportData([]);
         } finally { setIsLoading(false); }
     }, [filters]);
+
+    const fetchIntentionData = useCallback(async () => {
+        try {
+            setIsLoadingIntentions(true);
+            setErrorIntentions('');
+            const response = await fetch(`http://localhost:3001/api/relatorio/intencoes`);
+            if (!response.ok) throw new Error('Falha ao carregar dados de intenções.');
+            const data = await response.json();
+            setIntentionData(data);
+        } catch (err) {
+            setErrorIntentions(err.message);
+        } finally {
+            setIsLoadingIntentions(false);
+        }
+    }, []);
+    
+    useEffect(() => {
+        if (activeTab === 'intencoes') {
+            fetchIntentionData();
+        }
+    }, [activeTab, fetchIntentionData]);
     
     const clearFilters = () => {
         setFilters({ departamento: '', sublocal: '', dataInicio: '', dataFim: '', recurso: '' });
@@ -134,49 +160,96 @@ const ReportPage = ({ onBack, onLogout, onLogoClick, resources }) => {
 
     return (
         <div className="bg-slate-50 min-h-screen">
-            <Header title="Relatório de Utilização" onLogoClick={onLogoClick} onLogout={onLogout}>
+            <Header title="Relatórios" onLogoClick={onLogoClick} onLogout={onLogout}>
                 <button onClick={onBack} className="flex items-center text-gray-600 hover:text-blue-600 font-semibold p-2 rounded-md hover:bg-slate-100">
                     <icons.ArrowLeft className="h-6 w-6 mr-1" /><span className="hidden sm:inline">Voltar</span>
                 </button>
             </Header>
             <main className="w-full max-w-7xl mx-auto p-4 sm:p-8">
                 <div className="bg-white p-6 rounded-2xl shadow-lg">
-                    <h2 className="text-2xl font-bold text-slate-800 mb-4">Estatísticas de Uso por Recurso</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 p-4 border rounded-lg mb-6">
-                        <div><label className="block text-sm font-medium text-slate-700">Recurso</label><select name="recurso" value={filters.recurso} onChange={handleFilterChange} className="mt-1 w-full p-2 border border-slate-300 rounded-md"><option value="">Todos</option>{finalBookableResources.map(res => <option key={res.id} value={res.nome}>{res.nome}</option>)}</select></div>
-                        <div><label className="block text-sm font-medium text-slate-700">Departamento</label><select name="departamento" value={filters.departamento} onChange={handleFilterChange} className="mt-1 w-full p-2 border border-slate-300 rounded-md"><option value="">Todos</option>{Object.keys(departments).map(dept => <option key={dept} value={dept}>{dept}</option>)}</select></div>
-                        {filters.departamento === 'Fundamental 1' && (<div><label className="block text-sm font-medium text-slate-700">Sublocal</label><select name="sublocal" value={filters.sublocal} onChange={handleFilterChange} className="mt-1 w-full p-2 border border-slate-300 rounded-md"><option value="">Todos</option>{departments['Fundamental 1'].map(sub => <option key={sub} value={sub}>{sub}</option>)}</select></div>)}
-                        <div><label className="block text-sm font-medium text-slate-700">De:</label><input type="date" name="dataInicio" value={filters.dataInicio} onChange={handleFilterChange} className="mt-1 w-full p-2 border border-slate-300 rounded-md"/></div>
-                        <div><label className="block text-sm font-medium text-slate-700">Até:</label><input type="date" name="dataFim" value={filters.dataFim} onChange={handleFilterChange} className="mt-1 w-full p-2 border border-slate-300 rounded-md"/></div>
+                    <div className="border-b border-gray-200 mb-6">
+                        <nav className="-mb-px flex space-x-6" aria-label="Tabs">
+                            <button onClick={() => setActiveTab('uso')} className={`${activeTab === 'uso' ? 'border-blue-600 text-blue-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-semibold text-lg`}>Relatório de Uso</button>
+                            <button onClick={() => setActiveTab('intencoes')} className={`${activeTab === 'intencoes' ? 'border-blue-600 text-blue-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-semibold text-lg`}>Análise de Demanda</button>
+                        </nav>
                     </div>
-                    <div className="flex items-center space-x-4 mb-6">
-                        <button onClick={fetchReportData} className="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700">Aplicar Filtros</button>
-                        <button onClick={clearFilters} className="text-sm text-gray-600 hover:underline">Limpar</button>
-                        {reportData.length > 0 && (<button onClick={() => handleDownloadPdf()} className="px-6 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700">Descarregar PDF</button>)}
-                    </div>
-                    {isLoading && <p>A gerar relatório...</p>}
-                    {error && <p className="text-red-500">{error}</p>}
-                    {!isLoading && !error && reportData.length > 0 && (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm text-left text-slate-500">
-                                <thead className="text-xs text-slate-700 uppercase bg-slate-100"><tr><th scope="col" className="px-6 py-3">Recurso</th><th scope="col" className="px-6 py-3 text-center">Aprovadas</th><th scope="col" className="px-6 py-3 text-center">Canceladas</th><th scope="col" className="px-6 py-3 text-center">Recusadas</th></tr></thead>
-                                <tbody>
-                                    {reportData.map(item => (
-                                        <tr key={item.Recurso} className="bg-white border-b hover:bg-slate-50">
-                                            <td className="px-6 py-4 font-semibold text-slate-900">{item.Recurso}</td>
-                                            <td className="px-6 py-4 text-center text-lg font-bold text-green-600 cursor-pointer hover:underline" onClick={() => handleShowDetails(item.Recurso, 'aprovada')}>{item.Aprovadas}</td>
-                                            <td className="px-6 py-4 text-center text-lg font-bold text-gray-500 cursor-pointer hover:underline" onClick={() => handleShowDetails(item.Recurso, 'cancelada')}>{item.Canceladas}</td>
-                                            <td className="px-6 py-4 text-center text-lg font-bold text-red-600 cursor-pointer hover:underline" onClick={() => handleShowDetails(item.Recurso, 'recusada')}>{item.Recusadas}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+
+                    {activeTab === 'uso' && (
+                        <div className="fade-in">
+                            <h2 className="text-2xl font-bold text-slate-800 mb-4">Estatísticas de Uso por Recurso</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 p-4 border rounded-lg mb-6">
+                                <div><label className="block text-sm font-medium text-slate-700">Recurso</label><select name="recurso" value={filters.recurso} onChange={handleFilterChange} className="mt-1 w-full p-2 border border-slate-300 rounded-md"><option value="">Todos</option>{finalBookableResources.map(res => <option key={res.id} value={res.nome}>{res.nome}</option>)}</select></div>
+                                <div><label className="block text-sm font-medium text-slate-700">Departamento</label><select name="departamento" value={filters.departamento} onChange={handleFilterChange} className="mt-1 w-full p-2 border border-slate-300 rounded-md"><option value="">Todos</option>{Object.keys(departments).map(dept => <option key={dept} value={dept}>{dept}</option>)}</select></div>
+                                {filters.departamento === 'Fundamental 1' && (<div><label className="block text-sm font-medium text-slate-700">Sublocal</label><select name="sublocal" value={filters.sublocal} onChange={handleFilterChange} className="mt-1 w-full p-2 border border-slate-300 rounded-md"><option value="">Todos</option>{departments['Fundamental 1'].map(sub => <option key={sub} value={sub}>{sub}</option>)}</select></div>)}
+                                <div><label className="block text-sm font-medium text-slate-700">De:</label><input type="date" name="dataInicio" value={filters.dataInicio} onChange={handleFilterChange} className="mt-1 w-full p-2 border border-slate-300 rounded-md"/></div>
+                                <div><label className="block text-sm font-medium text-slate-700">Até:</label><input type="date" name="dataFim" value={filters.dataFim} onChange={handleFilterChange} className="mt-1 w-full p-2 border border-slate-300 rounded-md"/></div>
+                            </div>
+                            <div className="flex items-center space-x-4 mb-6">
+                                <button onClick={fetchReportData} className="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700">Aplicar Filtros</button>
+                                <button onClick={clearFilters} className="text-sm text-gray-600 hover:underline">Limpar</button>
+                                {reportData.length > 0 && (<button onClick={() => handleDownloadPdf()} className="px-6 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700">Descarregar PDF</button>)}
+                            </div>
+                            {isLoading && <p>A gerar relatório...</p>}
+                            {error && <p className="text-red-500">{error}</p>}
+                            {!isLoading && !error && reportData.length > 0 && (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm text-left text-slate-500">
+                                        <thead className="text-xs text-slate-700 uppercase bg-slate-100"><tr><th scope="col" className="px-6 py-3">Recurso</th><th scope="col" className="px-6 py-3 text-center">Aprovadas</th><th scope="col" className="px-6 py-3 text-center">Canceladas</th><th scope="col" className="px-6 py-3 text-center">Recusadas</th></tr></thead>
+                                        <tbody>
+                                            {reportData.map(item => (
+                                                <tr key={item.Recurso} className="bg-white border-b hover:bg-slate-50">
+                                                    <td className="px-6 py-4 font-semibold text-slate-900">{item.Recurso}</td>
+                                                    <td className="px-6 py-4 text-center text-lg font-bold text-green-600 cursor-pointer hover:underline" onClick={() => handleShowDetails(item.Recurso, 'aprovada')}>{item.Aprovadas}</td>
+                                                    <td className="px-6 py-4 text-center text-lg font-bold text-gray-500 cursor-pointer hover:underline" onClick={() => handleShowDetails(item.Recurso, 'cancelada')}>{item.Canceladas}</td>
+                                                    <td className="px-6 py-4 text-center text-lg font-bold text-red-600 cursor-pointer hover:underline" onClick={() => handleShowDetails(item.Recurso, 'recusada')}>{item.Recusadas}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                            {!isLoading && !error && reportData.length === 0 && <p className="text-slate-500">Nenhum resultado encontrado. Tente aplicar um filtro.</p>}
                         </div>
                     )}
-                    {!isLoading && !error && reportData.length === 0 && <p className="text-slate-500">Nenhum resultado encontrado. Tente aplicar um filtro.</p>}
+                    
+                    {activeTab === 'intencoes' && (
+                        <div className="fade-in">
+                            <h2 className="text-2xl font-bold text-slate-800 mb-4">Intenções de Reserva Registradas</h2>
+                            <p className="mb-6 text-slate-600">Esta lista mostra os horários em que os utilizadores tentaram reservar um recurso que já estava ocupado. Use estes dados para identificar a necessidade de novos recursos.</p>
+                            {isLoadingIntentions && <p>A carregar análise de demanda...</p>}
+                            {errorIntentions && <p className="text-red-500">{errorIntentions}</p>}
+                            {!isLoadingIntentions && !errorIntentions && (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm text-left text-slate-500">
+                                        <thead className="text-xs text-slate-700 uppercase bg-slate-100">
+                                            <tr>
+                                                <th scope="col" className="px-6 py-3">Solicitante</th>
+                                                <th scope="col" className="px-6 py-3">Recurso Desejado</th>
+                                                <th scope="col" className="px-6 py-3">Data & Horário Desejado</th>
+                                                <th scope="col" className="px-6 py-3">Data do Registro</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {intentionData.map((item, index) => (
+                                                <tr key={index} className="bg-white border-b hover:bg-slate-50">
+                                                    <td className="px-6 py-4 font-semibold text-slate-900">{item.Solicitante}</td>
+                                                    <td className="px-6 py-4">{item.Recurso}</td>
+                                                    <td className="px-6 py-4">
+                                                        {new Date(item.DataInicioDesejada).toLocaleDateString('pt-BR')} <br/>
+                                                        {new Date(item.DataInicioDesejada).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})} - {new Date(item.DataFimDesejada).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}
+                                                    </td>
+                                                    <td className="px-6 py-4">{new Date(item.DataRegistro).toLocaleString('pt-BR')}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
+                <DetailsModal details={modalDetails} onClose={() => setModalDetails({ isOpen: false, title: '', data: [] })} isLoading={isModalLoading} />
             </main>
-            <DetailsModal details={modalDetails} onClose={() => setModalDetails({ isOpen: false, title: '', data: [] })} isLoading={isModalLoading} />
         </div>
     );
 };
