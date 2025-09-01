@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import Header from '../components/Header';
 import icons from '../components/Icons';
+import { toast } from 'react-toastify';
 
-const AdminPage = ({ onBack, onLogout, onLogoClick, resources }) => {
+const AdminPage = ({ onBack, onLogout, onLogoClick, resources, onManageResourcesClick }) => {
     const [activeTab, setActiveTab] = useState('dia');
     const [selectedReservation, setSelectedReservation] = useState(null);
     const getToday = () => new Date().toISOString().split('T')[0];
@@ -134,7 +135,7 @@ const AdminPage = ({ onBack, onLogout, onLogoClick, resources }) => {
         if (newStatus === 'recusada') {
             motivo = prompt("Por favor, insira o motivo da recusa:");
             if (motivo === null) return;
-            if (!motivo.trim()) { alert("O motivo da recusa não pode estar em branco."); return; }
+            if (!motivo.trim()) { toast.error("O motivo da recusa não pode estar em branco."); return; }
         }
         try {
             const response = await fetch(`http://localhost:3001/api/admin/reservas/${reservaId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus, motivo: motivo }) });
@@ -145,7 +146,7 @@ const AdminPage = ({ onBack, onLogout, onLogoClick, resources }) => {
             if (activeTab === 'semana') fetchReservationsForWeek(currentDate);
 
             setSelectedReservation(null);
-        } catch (err) { alert(err.message); }
+        } catch (err) { toast.error(err.message); }
     };
     
     const handleDateChange = (daysToAdd) => {
@@ -207,10 +208,19 @@ const AdminPage = ({ onBack, onLogout, onLogoClick, resources }) => {
     return (
         <div className="bg-slate-50 min-h-screen">
             <Header title="Painel de Administração" onLogoClick={onLogoClick} onLogout={onLogout}>
-                <button onClick={onBack} className="flex items-center text-gray-600 hover:text-blue-600 font-semibold p-2 rounded-md hover:bg-slate-100">
-                    <icons.ArrowLeft className="h-6 w-6 mr-1" />
-                    <span className="hidden sm:inline">Voltar</span>
-                </button>
+                <div className="flex items-center space-x-2">
+                    <button onClick={onBack} className="flex items-center text-gray-600 hover:text-blue-600 font-semibold p-2 rounded-md hover:bg-slate-100">
+                        <icons.ArrowLeft className="h-6 w-6 mr-1" />
+                        <span className="hidden sm:inline">Voltar</span>
+                    </button>
+                    <button 
+                        onClick={onManageResourcesClick} 
+                        className="flex items-center bg-blue-50 text-blue-700 font-semibold p-2 rounded-md hover:bg-blue-100"
+                    >
+                        <icons.Settings className="h-6 w-6 mr-1" />
+                        <span className="hidden sm:inline">Gerir Recursos</span>
+                    </button>
+                </div>
             </Header>
             <main className="w-full max-w-screen-2xl mx-auto p-4 md:p-8">
                 <div className="bg-white p-4 md:p-6 rounded-2xl shadow-lg">
@@ -351,6 +361,5 @@ const AdminPage = ({ onBack, onLogout, onLogoClick, resources }) => {
         </div>
     );
 };
-
 
 export default AdminPage;

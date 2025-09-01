@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { toast } from 'react-toastify';
 import Header from '../components/Header';
 import icons from '../components/Icons';
 
@@ -98,7 +99,7 @@ const ReportPage = ({ onBack, onLogout, onLogoClick, resources }) => {
             if (!response.ok) throw new Error('Falha ao buscar detalhes.');
             const data = await response.json();
             setModalDetails(prev => ({ ...prev, data }));
-        } catch (err) { alert(err.message); } finally { setIsModalLoading(false); }
+        } catch (err) { toast.error(err.message); } finally { setIsModalLoading(false); }
     };
     
     const handleDownloadPdf = (specificParams = {}) => {

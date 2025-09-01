@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { toast } from 'react-toastify';
 import Header from '../components/Header';
 import icons from '../components/Icons';
 
@@ -14,7 +15,7 @@ const MyReservationsPage = ({ onBack, onLogout, userId, onLogoClick }) => {
             const data = await response.json(); 
             setMyReservations(data); 
         } catch (err) { 
-            alert(err.message); 
+            toast.error(err.message);
         } finally { 
             setIsLoading(false); 
         } 
@@ -39,7 +40,7 @@ const MyReservationsPage = ({ onBack, onLogout, userId, onLogoClick }) => {
                 } 
                 fetchMyReservations(); 
             } catch (err) { 
-                alert(err.message); 
+                toast.error(err.message);
             } 
         }
     };

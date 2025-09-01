@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useMsal, useIsAuthenticated } from "@azure/msal-react";
 import { InteractionStatus } from "@azure/msal-browser";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
@@ -12,6 +14,7 @@ import DateTimePage from './pages/DateTimePage';
 import ObservationsPage from './pages/ObservationsPage';
 import ConfirmationPage from './pages/ConfirmationPage';
 import HelpModal from './pages/HelpModal';
+import ManageResourcesPage from './pages/ManageResourcesPage'; 
 
 const App = () => {
     const { instance, inProgress, accounts } = useMsal();
@@ -20,8 +23,8 @@ const App = () => {
     const [resources, setResources] = useState([]);
     const [reservations, setReservations] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [user, setUser] = useState(null); // Nosso utilizador interno
-    const [loginError, setLoginError] = useState(null); // Novo estado para gerir erros de login
+    const [user, setUser] = useState(null);
+    const [loginError, setLoginError] = useState(null);
     const [page, setPage] = useState('home');
     const [showHelp, setShowHelp] = useState(false);
     const [reservationFlow, setReservationFlow] = useState({});
@@ -36,12 +39,13 @@ const App = () => {
             setReservations(resReservations);
         } catch (error) {
             console.error("Erro ao carregar dados da API:", error);
+            toast.error("Não foi possível carregar os dados da aplicação.");
         }
     }, []);
     
     useEffect(() => {
         const checkUser = async () => {
-            if (isAuthenticated && accounts.length > 0 && !user) { // Adicionado '!user' para evitar re-execuções desnecessárias
+            if (isAuthenticated && accounts.length > 0 && !user) {
                 const currentUserAccount = accounts[0];
                 const userEmail = currentUserAccount.username;
 
@@ -53,8 +57,7 @@ const App = () => {
                     });
 
                     if (!response.ok) {
-                        setLoginError(`O seu email (${userEmail}) foi autenticado pela Microsoft, mas não foi encontrado no sistema de reservas. Por favor, contacte o suporte de TI.`);
-                        // Reativa o logout para limpar a sessão inválida
+                        setLoginError(`O seu email (${userEmail}) foi autenticado, mas não foi encontrado no sistema. Contacte o suporte de TI.`);
                         instance.logoutRedirect(); 
                         return;
                     }
@@ -65,8 +68,8 @@ const App = () => {
                     await fetchData();
 
                 } catch (error) {
-                    console.error("Erro de rede ou crítico ao comunicar com a API interna:", error);
-                    setLoginError("Não foi possível conectar ao servidor de reservas. Tente novamente mais tarde.");
+                    console.error("Erro de rede ao comunicar com a API interna:", error);
+                    setLoginError("Não foi possível conectar ao servidor de reservas.");
                 } finally {
                     setIsLoading(false);
                 }
@@ -77,12 +80,11 @@ const App = () => {
         };
 
         checkUser();
-
     }, [isAuthenticated, inProgress, accounts, instance, fetchData, user]);
 
     const handleLogout = () => {
         instance.logoutRedirect({ postLogoutRedirectUri: "/" });
-        setUser(null); // Limpa o nosso estado de utilizador interno
+        setUser(null);
     };
     
     const handleLogoClick = () => setPage('home');
@@ -104,11 +106,14 @@ const App = () => {
             setReservationFlow(prev => ({ ...prev, observations }));
             fetchData();
             setPage('confirmation');
-        } catch (error) { console.error("Erro ao enviar pedido:", error); alert("Ocorreu um erro ao enviar o seu pedido."); }
+        } catch (error) { 
+            console.error("Erro ao enviar pedido:", error);
+            toast.error("Ocorreu um erro ao enviar o seu pedido.");
+        }
     };
       
     const handleBack = () => {
-        if (['admin', 'my_reservations', 'confirmation', 'report'].includes(page)) { setPage('home'); } 
+        if (['admin', 'my_reservations', 'confirmation', 'report', 'manage_resources'].includes(page)) { setPage('home'); } 
         else if (page === 'observations') { setPage('date_time'); } 
         else if (page === 'date_time') {
             if (reservationFlow.subResource) { setReservationFlow(prev => ({ resource: prev.resource })); setPage('sub_resource'); } 
@@ -122,8 +127,6 @@ const App = () => {
         return <div className="flex items-center justify-center min-h-screen text-lg font-semibold">A verificar autenticação...</div>;
     }
 
-    // Se não estiver autenticado ou se não tiver um utilizador válido no nosso sistema, mostra a página de login.
-    // Passamos o erro para a LoginPage para que ela o possa exibir.
     if (!isAuthenticated || !user) {
         return <LoginPage loginError={loginError} />;
     }
@@ -132,13 +135,14 @@ const App = () => {
         const finalResource = reservationFlow.subResource || reservationFlow.resource;
         switch(page) {
             case 'home': return <HomePage resources={resources} onResourceClick={handleResourceClick} onLogout={handleLogout} onAdminClick={() => setPage('admin')} onMyReservationsClick={() => setPage('my_reservations')} userProfile={user.profile} onLogoClick={handleLogoClick} onReportClick={() => setPage('report')} onShowHelp={() => setShowHelp(true)} />;
-            case 'admin': return <AdminPage onBack={handleBack} onLogout={handleLogout} resources={resources} onLogoClick={handleLogoClick} />;
+            case 'admin': return <AdminPage onBack={handleBack} onLogout={handleLogout} resources={resources} onLogoClick={handleLogoClick} onManageResourcesClick={() => setPage('manage_resources')} />;
             case 'my_reservations': return <MyReservationsPage onBack={handleBack} onLogout={handleLogout} userId={user.id} onLogoClick={handleLogoClick} />;
             case 'sub_resource': return <SubResourcePage resource={reservationFlow.resource} onSelect={handleSubResourceSelect} onBack={handleBack} onLogout={handleLogout} onLogoClick={handleLogoClick} />;
             case 'date_time': return <DateTimePage finalResource={finalResource} reservations={reservations} onBack={handleBack} onLogout={handleLogout} onDateTimeSubmit={handleDateTimeSubmit} onLogoClick={handleLogoClick} user={user} />;
             case 'observations': return <ObservationsPage finalResource={finalResource} reservationDetails={reservationFlow.timeDetails} onBack={handleBack} onLogout={handleLogout} onConfirm={handleConfirm} onLogoClick={handleLogoClick} />;
             case 'confirmation': return <ConfirmationPage details={{...reservationFlow, finalResource}} onNewReservation={handleNewReservation} onMyReservationsClick={() => setPage('my_reservations')} />;
             case 'report': return <ReportPage onBack={handleBack} onLogout={handleLogout} onLogoClick={handleLogoClick} resources={resources} />;
+            case 'manage_resources': return <ManageResourcesPage onBack={handleBack} onLogout={handleLogout} onLogoClick={handleLogoClick} />;
             default: return <div>Página não encontrada</div>;
         }
     };
@@ -147,6 +151,18 @@ const App = () => {
         <div className="font-sans antialiased text-slate-800 bg-slate-100 min-h-screen">
             {renderPage()}
             {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
+            <ToastContainer
+                position="top-right"
+                autoClose={5000}
+                hideProgressBar={false}
+                newestOnTop={false}
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                theme="light"
+            />
         </div>
     );
 };

@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { toast } from 'react-toastify';
 import Header from '../components/Header';
 import icons from '../components/Icons';
 
@@ -51,7 +52,7 @@ const DateTimePage = ({ finalResource, reservations, onBack, onLogout, onDateTim
         if (date && startTime && endTime) {
             onDateTimeSubmit({ date, startTime, endTime });
         } else {
-            alert('Por favor, selecione data e horários.');
+            toast.warn('Por favor, selecione data e horários.');
         }
     };
 
@@ -62,7 +63,7 @@ const DateTimePage = ({ finalResource, reservations, onBack, onLogout, onDateTim
             return;
         }
         if (!date || !startTime || !endTime) {
-            alert('Por favor, selecione data e horários antes de declarar a intenção.');
+            toast.warn('Por favor, selecione data e horários antes de declarar a intenção.');
             return;
         }
         const intentionData = {
@@ -81,7 +82,7 @@ const DateTimePage = ({ finalResource, reservations, onBack, onLogout, onDateTim
             setIntentionSent(true);
         } catch (error) {
             console.error(error);
-            alert("Ocorreu um erro ao registar a sua intenção. Tente novamente.");
+            toast.error("Ocorreu um erro ao registar a sua intenção. Tente novamente.");
         }
     };
 
