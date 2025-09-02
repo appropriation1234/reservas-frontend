@@ -6,7 +6,6 @@ const AdminLayout = ({ user, onLogout, onLogoClick, activePage, setActivePage, c
     
     // Mapeia o nome da página para o título a ser exibido
     const pageTitles = {
-        dashboard: 'Dashboard',
         reservations: 'Gestão de Reservas',
         resources: 'Gestão de Recursos',
         users: 'Gestão de Utilizadores',
@@ -40,11 +39,6 @@ const AdminLayout = ({ user, onLogout, onLogoClick, activePage, setActivePage, c
             <div className="flex">
                 <aside className="w-64 bg-white p-4 border-r border-slate-200 h-[calc(100vh-73px)] sticky top-[73px]">
                     <nav>
-                        <NavLink 
-                            pageName="dashboard" 
-                            icon={<icons.Shield size={20} />} 
-                            label="Dashboard"
-                        />
                         <NavLink 
                             pageName="reservations" 
                             icon={<icons.Calendar size={20} />} 

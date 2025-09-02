@@ -5,7 +5,6 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 import AdminLayout from './components/AdminLayout';
-import DashboardPage from './pages/DashboardPage';
 import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
 import AdminPage from './pages/AdminPage';
@@ -157,20 +156,20 @@ const App = () => {
             return <LoginPage loginError={loginError} />;
         }
         
-        if (['dashboard', 'reservations', 'resources', 'users'].includes(page)) {
-            return (
-                <AdminLayout user={user} onLogout={handleLogout} onLogoClick={handleBackToHome} activePage={page} setActivePage={setPage}>
-                    {page === 'dashboard' && <DashboardPage />}
-                    {page === 'reservations' && <AdminPage resources={resources} />}
-                    {page === 'resources' && <ManageResourcesPage />}
-                    {page === 'users' && <ManageUsersPage />}
-                </AdminLayout>
-            );
-        }
+        if (['reservations', 'resources', 'users'].includes(page)) {
+    return (
+        <AdminLayout user={user} onLogout={handleLogout} onLogoClick={handleBackToHome} activePage={page} setActivePage={setPage}>
+            {/* O DashboardPage foi removido daqui */}
+            {page === 'reservations' && <AdminPage resources={resources} />}
+            {page === 'resources' && <ManageResourcesPage />}
+            {page === 'users' && <ManageUsersPage />}
+        </AdminLayout>
+    );
+}
         
         const finalResource = reservationFlow.subResource || reservationFlow.resource;
         switch(page) {
-            case 'home': return <HomePage resources={resources} onResourceClick={handleResourceClick} onLogout={handleLogout} onAdminClick={() => setPage('dashboard')} onMyReservationsClick={() => setPage('my_reservations')} userProfile={user.profile} onLogoClick={handleLogoClick} onReportClick={() => setPage('report')} onShowHelp={() => setShowHelp(true)} />;
+            case 'home': return <HomePage resources={resources} onResourceClick={handleResourceClick} onLogout={handleLogout} onAdminClick={() => setPage('reservations')} onMyReservationsClick={() => setPage('my_reservations')} userProfile={user.profile} onLogoClick={handleLogoClick} onReportClick={() => setPage('report')} onShowHelp={() => setShowHelp(true)} />;
             case 'my_reservations': return <MyReservationsPage onBack={handleBack} onLogout={handleLogout} userId={user.id} onLogoClick={handleLogoClick} />;
             case 'report': return <ReportPage onBack={handleBack} onLogout={handleLogout} onLogoClick={handleLogoClick} resources={resources} />;
             case 'sub_resource': return <SubResourcePage resource={reservationFlow.resource} onSelect={handleSubResourceSelect} onBack={handleBack} onLogout={handleLogout} onLogoClick={handleLogoClick} />;
