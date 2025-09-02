@@ -1,5 +1,3 @@
-// src/components/ResourceModal.jsx
-
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import icons from './Icons';
@@ -9,9 +7,10 @@ const ResourceModal = ({ isOpen, onClose, mode, type, item, onSave }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
-        // Quando o modal abre, preenche o formulário com os dados do item
         if (item) {
             setFormData(item);
+        } else {
+            setFormData({});
         }
     }, [item]);
 
@@ -29,12 +28,13 @@ const ResourceModal = ({ isOpen, onClose, mode, type, item, onSave }) => {
         const isMainResource = type === 'main';
         let url = '';
         let method = '';
+        const id = isMainResource ? item?.RecursoID : item?.SubRecursoID;
 
         if (mode === 'add') {
             url = isMainResource ? '/api/gerir/recursos' : '/api/gerir/subrecursos';
             method = 'POST';
-        } else { // 'edit'
-            url = isMainResource ? `/api/gerir/recursos/${item.RecursoID}` : `/api/gerir/subrecursos/${item.SubRecursoID}`;
+        } else {
+            url = isMainResource ? `/api/gerir/recursos/${id}` : `/api/gerir/subrecursos/${id}`;
             method = 'PUT';
         }
 
@@ -51,8 +51,8 @@ const ResourceModal = ({ isOpen, onClose, mode, type, item, onSave }) => {
             }
 
             toast.success(responseData.message);
-            onSave(); // Re-sincroniza os dados na página pai
-            onClose(); // Fecha o modal
+            onSave();
+            onClose();
 
         } catch (err) {
             toast.error(err.message);
@@ -69,6 +69,21 @@ const ResourceModal = ({ isOpen, onClose, mode, type, item, onSave }) => {
                 <h2 className="text-2xl font-bold text-slate-800 mb-6">{title}</h2>
                 
                 <form onSubmit={handleSubmit} className="space-y-4">
+                    {mode === 'add' && (
+                        <div>
+                            <label htmlFor={type === 'main' ? 'RecursoID' : 'SubRecursoID'} className="block text-sm font-medium text-slate-700">ID do Recurso (ex: rec005, sub007)</label>
+                            <input
+                                type="text"
+                                id={type === 'main' ? 'RecursoID' : 'SubRecursoID'}
+                                name={type === 'main' ? 'RecursoID' : 'SubRecursoID'}
+                                value={formData[type === 'main' ? 'RecursoID' : 'SubRecursoID'] || ''}
+                                onChange={handleChange}
+                                required
+                                className="mt-1 w-full p-2 border border-slate-300 rounded-md shadow-sm"
+                            />
+                        </div>
+                    )}
+                    
                     <div>
                         <label htmlFor="Nome" className="block text-sm font-medium text-slate-700">Nome do Recurso</label>
                         <input

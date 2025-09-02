@@ -4,6 +4,8 @@ import { InteractionStatus } from "@azure/msal-browser";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
+import AdminLayout from './components/AdminLayout';
+import DashboardPage from './pages/DashboardPage';
 import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
 import AdminPage from './pages/AdminPage';
@@ -14,18 +16,19 @@ import DateTimePage from './pages/DateTimePage';
 import ObservationsPage from './pages/ObservationsPage';
 import ConfirmationPage from './pages/ConfirmationPage';
 import HelpModal from './pages/HelpModal';
-import ManageResourcesPage from './pages/ManageResourcesPage'; 
+import ManageResourcesPage from './pages/ManageResourcesPage';
+import ManageUsersPage from './pages/ManageUsersPage';
 
 const App = () => {
     const { instance, inProgress, accounts } = useMsal();
     const isAuthenticated = useIsAuthenticated();
 
+    const [page, setPage] = useState('home');
     const [resources, setResources] = useState([]);
     const [reservations, setReservations] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [user, setUser] = useState(null);
     const [loginError, setLoginError] = useState(null);
-    const [page, setPage] = useState('home');
     const [showHelp, setShowHelp] = useState(false);
     const [reservationFlow, setReservationFlow] = useState({});
 
@@ -70,6 +73,7 @@ const App = () => {
                 } catch (error) {
                     console.error("Erro de rede ao comunicar com a API interna:", error);
                     setLoginError("Não foi possível conectar ao servidor de reservas.");
+                    toast.error("Não foi possível conectar ao servidor de reservas.");
                 } finally {
                     setIsLoading(false);
                 }
@@ -88,7 +92,17 @@ const App = () => {
     };
     
     const handleLogoClick = () => setPage('home');
-    const handleResourceClick = (resource) => { setReservationFlow({ resource }); setPage(resource.subRecursos?.length > 0 ? 'sub_resource' : 'date_time'); };
+    
+    const handleResourceClick = (resource) => {
+        setReservationFlow({ resource });
+        // LÓGICA CORRIGIDA: Verifica se a lista de sub-recursos existe E tem mais de 0 itens.
+        if (resource.subRecursos && resource.subRecursos.length > 0) {
+            setPage('sub_resource');
+        } else {
+            setPage('date_time');
+        }
+    };
+
     const handleSubResourceSelect = (subResource) => { setReservationFlow(prev => ({ ...prev, subResource })); setPage('date_time'); };
     const handleDateTimeSubmit = (details) => { setReservationFlow(prev => ({ ...prev, timeDetails: details })); setPage('observations'); };
       
@@ -96,9 +110,14 @@ const App = () => {
         const { resource, subResource, timeDetails } = reservationFlow;
         const finalResource = subResource || resource;
         const newReservationData = {
-          usuarioId: user.id, recursoPaiId: resource.id, recursoFinalId: finalResource.id,
-          dataInicio: `${timeDetails.date}T${timeDetails.startTime}:00`, dataFim: `${timeDetails.date}T${timeDetails.endTime}:00`,
-          status: 'pendente', obsLocal: observations.local, obsAtividade: observations.atividade
+          usuarioId: user.id, 
+          recursoPaiId: resource.id, 
+          recursoFinalId: finalResource.id,
+          dataInicio: `${timeDetails.date}T${timeDetails.startTime}:00`, 
+          dataFim: `${timeDetails.date}T${timeDetails.endTime}:00`,
+          status: 'pendente', 
+          obsLocal: observations.local, 
+          obsAtividade: observations.atividade
         };
         try {
             const response = await fetch('http://localhost:3001/api/reservas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newReservationData) });
@@ -112,8 +131,14 @@ const App = () => {
         }
     };
       
+    const handleBackToHome = () => {
+        setPage('home');
+    };
+
     const handleBack = () => {
-        if (['admin', 'my_reservations', 'confirmation', 'report', 'manage_resources'].includes(page)) { setPage('home'); } 
+        if (['my_reservations', 'confirmation', 'report'].includes(page)) { 
+            setPage('home'); 
+        } 
         else if (page === 'observations') { setPage('date_time'); } 
         else if (page === 'date_time') {
             if (reservationFlow.subResource) { setReservationFlow(prev => ({ resource: prev.resource })); setPage('sub_resource'); } 
@@ -123,26 +148,35 @@ const App = () => {
 
     const handleNewReservation = () => { setReservationFlow({}); setPage('home'); };
 
-    if (isLoading) {
-        return <div className="flex items-center justify-center min-h-screen text-lg font-semibold">A verificar autenticação...</div>;
-    }
-
-    if (!isAuthenticated || !user) {
-        return <LoginPage loginError={loginError} />;
-    }
-    
     const renderPage = () => {
+        if (isLoading) {
+            return <div className="flex items-center justify-center min-h-screen text-lg font-semibold">A verificar autenticação...</div>;
+        }
+
+        if (!isAuthenticated || !user) {
+            return <LoginPage loginError={loginError} />;
+        }
+        
+        if (['dashboard', 'reservations', 'resources', 'users'].includes(page)) {
+            return (
+                <AdminLayout user={user} onLogout={handleLogout} onLogoClick={handleBackToHome} activePage={page} setActivePage={setPage}>
+                    {page === 'dashboard' && <DashboardPage />}
+                    {page === 'reservations' && <AdminPage resources={resources} />}
+                    {page === 'resources' && <ManageResourcesPage />}
+                    {page === 'users' && <ManageUsersPage />}
+                </AdminLayout>
+            );
+        }
+        
         const finalResource = reservationFlow.subResource || reservationFlow.resource;
         switch(page) {
-            case 'home': return <HomePage resources={resources} onResourceClick={handleResourceClick} onLogout={handleLogout} onAdminClick={() => setPage('admin')} onMyReservationsClick={() => setPage('my_reservations')} userProfile={user.profile} onLogoClick={handleLogoClick} onReportClick={() => setPage('report')} onShowHelp={() => setShowHelp(true)} />;
-            case 'admin': return <AdminPage onBack={handleBack} onLogout={handleLogout} resources={resources} onLogoClick={handleLogoClick} onManageResourcesClick={() => setPage('manage_resources')} />;
+            case 'home': return <HomePage resources={resources} onResourceClick={handleResourceClick} onLogout={handleLogout} onAdminClick={() => setPage('dashboard')} onMyReservationsClick={() => setPage('my_reservations')} userProfile={user.profile} onLogoClick={handleLogoClick} onReportClick={() => setPage('report')} onShowHelp={() => setShowHelp(true)} />;
             case 'my_reservations': return <MyReservationsPage onBack={handleBack} onLogout={handleLogout} userId={user.id} onLogoClick={handleLogoClick} />;
+            case 'report': return <ReportPage onBack={handleBack} onLogout={handleLogout} onLogoClick={handleLogoClick} resources={resources} />;
             case 'sub_resource': return <SubResourcePage resource={reservationFlow.resource} onSelect={handleSubResourceSelect} onBack={handleBack} onLogout={handleLogout} onLogoClick={handleLogoClick} />;
             case 'date_time': return <DateTimePage finalResource={finalResource} reservations={reservations} onBack={handleBack} onLogout={handleLogout} onDateTimeSubmit={handleDateTimeSubmit} onLogoClick={handleLogoClick} user={user} />;
             case 'observations': return <ObservationsPage finalResource={finalResource} reservationDetails={reservationFlow.timeDetails} onBack={handleBack} onLogout={handleLogout} onConfirm={handleConfirm} onLogoClick={handleLogoClick} />;
             case 'confirmation': return <ConfirmationPage details={{...reservationFlow, finalResource}} onNewReservation={handleNewReservation} onMyReservationsClick={() => setPage('my_reservations')} />;
-            case 'report': return <ReportPage onBack={handleBack} onLogout={handleLogout} onLogoClick={handleLogoClick} resources={resources} />;
-            case 'manage_resources': return <ManageResourcesPage onBack={handleBack} onLogout={handleLogout} onLogoClick={handleLogoClick} />;
             default: return <div>Página não encontrada</div>;
         }
     };
