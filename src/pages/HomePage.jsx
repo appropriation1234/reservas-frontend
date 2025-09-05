@@ -23,7 +23,7 @@ const HomePage = ({ resources, onResourceClick, onLogout, onAdminClick, onMyRese
         );
     };
 
-    // Componente para o cartão de placeholder com cadeado
+    // Componente para o placeholder
     const PlaceholderCard = ({ key }) => {
         const IconComponent = icons['Lock'];
         return (
@@ -43,7 +43,9 @@ const HomePage = ({ resources, onResourceClick, onLogout, onAdminClick, onMyRese
                     <icons.Calendar className="h-5 w-5 sm:mr-2" />
                     <span className="hidden sm:inline">Minhas Reservas</span>
                 </button>
-                {userProfile === 'TI_Admin' && (
+                
+                {/* ===== A CORREÇÃO ESTÁ AQUI ===== */}
+                {['TI_Admin', 'Secretaria', 'ProdutorEventos'].includes(userProfile) && (
                     <>
                         <button onClick={onReportClick} className="flex items-center bg-white text-purple-600 border border-purple-600 font-semibold py-2 px-2 sm:px-3 rounded-lg hover:bg-purple-50 transition-colors text-sm whitespace-nowrap">
                             <icons.Shield className="h-5 w-5 sm:mr-2" />
@@ -59,12 +61,9 @@ const HomePage = ({ resources, onResourceClick, onLogout, onAdminClick, onMyRese
             
             <main className="w-full max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {/* Renderiza a primeira linha com os recursos principais */}
                     {mainResources.map((resource) => (
                         <ResourceCard key={resource.id} resource={resource} />
                     ))}
-
-                    {/* Renderiza a segunda linha com a estrutura desejada */}
                     <PlaceholderCard key="placeholder-1" />
                     {streamingResource && <ResourceCard key={streamingResource.id} resource={streamingResource} />}
                     <PlaceholderCard key="placeholder-2" />
@@ -82,4 +81,4 @@ const HomePage = ({ resources, onResourceClick, onLogout, onAdminClick, onMyRese
     );
 };
 
-export default HomePage;
+export default HomePage; 
